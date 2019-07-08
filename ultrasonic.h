@@ -47,11 +47,11 @@ typedef struct {
 
 typedef void * ultrasonicsensor_handle_t;
 
-#define ULTRASONIC_SENSOR_CONFIG_DEFAULT()       \
+#define ULTRASONICSENSOR_CONFIG_DEFAULT()       \
 {                                      \
     .rmt = {                           \
         .tx_channel = RMT_CHANNEL_1,   \
-        .trigger_pin = GPIO_NUM_18     \
+        .trigger_pin = GPIO_NUM_18,    \
         .rx_channel = RMT_CHANNEL_0,   \
         .echo_pin = GPIO_NUM_19,       \
     },                                 \
