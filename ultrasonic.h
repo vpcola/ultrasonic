@@ -42,6 +42,7 @@ typedef struct {
      rmt_channel_t  rx_channel;   /*!< RMT RX Channel to use */
      gpio_num_t     echo_pin;       /*!< GPIO pin for RX */
  } rmt;                           /*!< RMT specific configuration */
+ uint32_t read_interval;
 } ultrasonicsensor_config_t;
 
 typedef void * ultrasonicsensor_handle_t;
@@ -53,7 +54,8 @@ typedef void * ultrasonicsensor_handle_t;
         .trigger_pin = GPIO_NUM_18     \
         .rx_channel = RMT_CHANNEL_0,   \
         .echo_pin = GPIO_NUM_19,       \
-    }                                  \
+    },                                 \
+    .read_interval = 100               \
 }
 
 typedef enum {

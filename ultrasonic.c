@@ -25,6 +25,7 @@ typedef struct {
     ultrasonicsensor_t parent;                     /*!< Parent class */
     rmt_channel_t   tx_channel;                    /*!< RMT tx (trigger) channel */
     rmt_channel_t   rx_channel;                    /*!< RMT rx (echo) channel */
+    uint32_t        read_interval;                 /*!< Interval between reads in milliseconds */
     esp_event_loop_handle_t event_loop_hdl;        /*!< Event loop handle */
     TaskHandle_t tsk_hdl;                          /*!< Task handle */
     QueueHandle_t event_queue;                     /*!< Event queue handle */
@@ -75,7 +76,7 @@ static void ultrasonicsensor_task_entry(void *arg)
         /* Drive the event loop */
         esp_event_loop_run(esp_ultrasonicsensor->event_loop_hdl, pdMS_TO_TICKS(50));
         /* Wait for the next reading */
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(esp_ultrasonicsensor->read_interval / portTICK_PERIOD_MS);
    }
     vTaskDelete(NULL);
 }
@@ -140,6 +141,7 @@ ultrasonicsensor_handle_t ultrasonicsensor_init(const ultrasonicsensor_config_t 
     // Sets the RX and TX RMT channels
     esp_ultrasonicsensor->tx_channel = config->rmt.tx_channel;
     esp_ultrasonicsensor->rx_channel = config->rmt.rx_channel;
+    esp_ultrasonicsensor->read_interval = config->read_interval;
     /* Create Event loop */
     esp_event_loop_args_t loop_args = {
         .queue_size = ULTRASONICSENSOR_EVENT_LOOP_QUEUE_SIZE,
