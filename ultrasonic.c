@@ -13,7 +13,7 @@
 
 #define RMT_CLK_DIV 100 /* RMT counter clock divider */
 #define RMT_TX_CARRIER_EN 0 /* Disable carrier */
-#define rmt_item32_tIMEOUT_US 9500 /*!< RMT receiver timeout value(us) */
+#define RMT_RX_TIMEOUT_US 9500 /*!< RMT receiver timeout value(us) */
 #define RMT_TICK_10_US (80000000/RMT_CLK_DIV/100000) /* RMT counter value for 10 us.(Source clock is APB clock) */
 #define ITEM_DURATION(d) ((d & 0x7fff)*10/RMT_TICK_10_US)
 
@@ -34,6 +34,7 @@ typedef struct {
 static void ultrasonicsensor_task_entry(void *arg)
 {
     esp_ultrasonicsensor_t *esp_ultrasonicsensor = (esp_ultrasonicsensor_t *)arg;
+    uint32_t readcount = 0;
 
      /* Create a 20us pulse for the TX channel */
     rmt_item32_t item;
@@ -46,9 +47,9 @@ static void ultrasonicsensor_task_entry(void *arg)
     size_t rx_size = 0;
     RingbufHandle_t rb = NULL;
     rmt_get_ringbuf_handle(esp_ultrasonicsensor->rx_channel, &rb);
-    rmt_rx_start(esp_ultrasonicsensor->rx_channel, 1);
    
     while (1) {
+        rmt_rx_start(esp_ultrasonicsensor->rx_channel, 1);
         /* Send the pulse to the TX channel */
         rmt_write_items(esp_ultrasonicsensor->tx_channel, &item, 1, true);
         rmt_wait_tx_done(esp_ultrasonicsensor->tx_channel, portMAX_DELAY);
@@ -63,15 +64,22 @@ static void ultrasonicsensor_task_entry(void *arg)
             vRingbufferReturnItem(rb, (void*) item);
 
             // Update the value!
-            esp_ultrasonicsensor->parent.distance_cm = distance;
+            esp_ultrasonicsensor->parent.distance_cm = distance * 100;
 			// Post sensor update event 
-            esp_event_post_to(esp_ultrasonicsensor->event_loop_hdl, ESP_ULTRASONICSENSOR_EVENT, ULTRASONICSENSOR_UPDATE,
-            &(esp_ultrasonicsensor->parent), sizeof(ultrasonicsensor_t), 100 / portTICK_PERIOD_MS);
+            if (readcount > 0) // Discard first reading.
+            {
+                esp_event_post_to(esp_ultrasonicsensor->event_loop_hdl, ESP_ULTRASONICSENSOR_EVENT, ULTRASONICSENSOR_UPDATE,
+                        &(esp_ultrasonicsensor->parent), sizeof(ultrasonicsensor_t), 100 / portTICK_PERIOD_MS);
+            }
+            readcount++;
 
         } else {
             // There are time where no echo is received
             ESP_LOGI(ULTRASONIC_TAG, "Distance is not readable");
         }
+
+        // Stop the ring buffer
+        rmt_rx_stop(esp_ultrasonicsensor->rx_channel);
 
         /* Drive the event loop */
         esp_event_loop_run(esp_ultrasonicsensor->event_loop_hdl, pdMS_TO_TICKS(50));
@@ -125,7 +133,7 @@ ultrasonicsensor_handle_t ultrasonicsensor_init(const ultrasonicsensor_config_t 
     rmt_rx.rmt_mode = RMT_MODE_RX;
     rmt_rx.rx_config.filter_en = true;
     rmt_rx.rx_config.filter_ticks_thresh = 100;
-    rmt_rx.rx_config.idle_threshold = rmt_item32_tIMEOUT_US / 10 * (RMT_TICK_10_US);
+    rmt_rx.rx_config.idle_threshold = RMT_RX_TIMEOUT_US / 10 * (RMT_TICK_10_US);
 
     if ( rmt_config(&rmt_rx) != ESP_OK)
     {
