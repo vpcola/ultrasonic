@@ -36,6 +36,9 @@ void app_main()
 {
     /* Dustsensor parser configuration */
     ultrasonicsensor_config_t config = ULTRASONICSENSOR_CONFIG_DEFAULT();
+    config.read_interval = 1000;
+    config.rmt.trigger_pin = GPIO_NUM_15;
+    config.rmt.echo_pin = GPIO_NUM_4;
     /* init Dustsensor parser library */
     ultrasonicsensor_handle_t ultrasonicsensor_hdl = ultrasonicsensor_init(&config);
     /* register event handler for Dustsensor parser library */
