@@ -56,18 +56,19 @@ static void ultrasonicsensor_task_entry(void *arg)
         // Start receiving whatever data is received back
         size_t rx_size = 0;
         rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, 1000);
-        if(item){
+        if(item && (rx_size > 0))
+        {
             // distance = (high time * speed of sound (340.29 meters/sec)) /2;
             // convert the distance from meters to centimeters
             double distance = 340.29 * ITEM_DURATION(item->duration0) / (1000 * 1000 * 2); 
-            ESP_LOGI(ULTRASONIC_TAG, "RxSize = %d, Distance is %.2f cm\n", rx_size, distance * 100); // distance in centimeters
             vRingbufferReturnItem(rb, (void*) item);
 
             // Update the value!
-            esp_ultrasonicsensor->parent.distance_cm = distance * 100;
 			// Post sensor update event 
-            if (readcount > 0) // Discard first reading.
+            if ((readcount > 0) || (distance > 400.0) || (distance == 0.0)) // Discard first reading and range errors
             {
+                ESP_LOGI(ULTRASONIC_TAG, "RxSize = %d, Distance is %.2f cm\n", rx_size, distance * 100); // distance in centimeters
+                esp_ultrasonicsensor->parent.distance_cm = distance * 100;
                 esp_event_post_to(esp_ultrasonicsensor->event_loop_hdl, ESP_ULTRASONICSENSOR_EVENT, ULTRASONICSENSOR_UPDATE,
                         &(esp_ultrasonicsensor->parent), sizeof(ultrasonicsensor_t), 100 / portTICK_PERIOD_MS);
             }
