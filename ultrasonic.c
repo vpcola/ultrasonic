@@ -44,23 +44,23 @@ static void ultrasonicsensor_task_entry(void *arg)
     item.duration1 = RMT_TICK_10_US; // for one pulse this doesn't matter
 
     /* Initialize the ring buffer for the RX channel */
-    size_t rx_size = 0;
     RingbufHandle_t rb = NULL;
     rmt_get_ringbuf_handle(esp_ultrasonicsensor->rx_channel, &rb);
    
     while (1) {
-        rmt_rx_start(esp_ultrasonicsensor->rx_channel, 1);
         /* Send the pulse to the TX channel */
         rmt_write_items(esp_ultrasonicsensor->tx_channel, &item, 1, true);
         rmt_wait_tx_done(esp_ultrasonicsensor->tx_channel, portMAX_DELAY);
 
+        rmt_rx_start(esp_ultrasonicsensor->rx_channel, 1);
         // Start receiving whatever data is received back
+        size_t rx_size = 0;
         rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, 1000);
         if(item){
             // distance = (high time * speed of sound (340.29 meters/sec)) /2;
             // convert the distance from meters to centimeters
             double distance = 340.29 * ITEM_DURATION(item->duration0) / (1000 * 1000 * 2); 
-            ESP_LOGI(ULTRASONIC_TAG, "Distance is %.2f cm\n", distance * 100); // distance in centimeters
+            ESP_LOGI(ULTRASONIC_TAG, "RxSize = %d, Distance is %.2f cm\n", rx_size, distance * 100); // distance in centimeters
             vRingbufferReturnItem(rb, (void*) item);
 
             // Update the value!
