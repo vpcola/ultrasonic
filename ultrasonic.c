@@ -55,7 +55,8 @@ static void ultrasonicsensor_task_entry(void *arg)
         rmt_rx_start(esp_ultrasonicsensor->rx_channel, 1);
         // Start receiving whatever data is received back
         size_t rx_size = 0;
-        rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, 1000);
+        // Get rx data within a 1s wait
+        rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, pdMS_TO_TICKS(1000));
         if(item && (rx_size > 0))
         {
             // distance = (high time * speed of sound (340.29 meters/sec)) /2;
