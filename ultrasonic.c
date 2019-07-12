@@ -56,9 +56,15 @@ static void ultrasonicsensor_task_entry(void *arg)
         // Start receiving whatever data is received back
         size_t rx_size = 0;
         // Get rx data within a 1s wait
-        rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, pdMS_TO_TICKS(1000));
-        if(item && (rx_size > 0))
+        rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceiveUpTo(rb, &rx_size, pdMS_TO_TICKS(100),
+                                    sizeof(rmt_item32_t));
+
+        if(item) // && ((rx_size >=1) * (sizeof(rmt_item32_t))) )
         {
+#if 1
+            ESP_LOGI(ULTRASONIC_TAG, "level0: %d, duration0 %d\n", item->level0, item->duration0 );
+            ESP_LOGI(ULTRASONIC_TAG, "level1: %d, duration1 %d\n", item->level1, item->duration1 );
+#endif
             // distance = (high time * speed of sound (340.29 meters/sec)) /2;
             // convert the distance from meters to centimeters
             double distance = 340.29 * ITEM_DURATION(item->duration0) / (1000 * 1000 * 2); 
@@ -66,7 +72,7 @@ static void ultrasonicsensor_task_entry(void *arg)
 
             // Update the value!
 			// Post sensor update event 
-            if ((readcount > 0) || (distance > 400.0) || (distance == 0.0)) // Discard first reading and range errors
+            if (readcount > 0) // Discard first reading and range errors
             {
                 ESP_LOGI(ULTRASONIC_TAG, "RxSize = %d, Distance is %.2f cm\n", rx_size, distance * 100); // distance in centimeters
                 esp_ultrasonicsensor->parent.distance_cm = distance * 100;
